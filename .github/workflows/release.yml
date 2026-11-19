@@ -11,13 +11,13 @@ jobs:
       matrix:
         os:
           - windows-latest
-          - ubuntu-latest
+          - ubuntu-22.04
         python-version:
-          - "3.9"
+          - "3.11"
         include:
           - os: windows-latest
             script-ext: ".exe"
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             script-ext: ""
 
     steps:
@@ -33,7 +33,7 @@ jobs:
         run: python -m unittest discover -s tests -v
 
       - name: Create virtual environment and install dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           python -m venv venv
           source venv/bin/activate
@@ -48,7 +48,7 @@ jobs:
         shell: powershell
 
       - name: Build Keil2Json executable
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           source venv/bin/activate
           python -m PyInstaller --clean --noconfirm --onefile --console --name Keil2Json --distpath dist Keil2Json.py
@@ -62,7 +62,7 @@ jobs:
         shell: powershell
 
       - name: Build Keil2JsonCpp executable
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           bash cpp/build.sh
         shell: bash
@@ -74,12 +74,12 @@ jobs:
         shell: powershell
 
       - name: Zip executable
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           mkdir -p output
           cp dist/Keil2Json output/
           cp dist-cpp/Keil2JsonCpp output/
-          zip -r Keil2Json-ubuntu-latest.zip output/
+          zip -r Keil2Json-ubuntu-22.04.zip output/
         shell: bash
 
       - name: Zip executable (Windows)
@@ -99,7 +99,7 @@ jobs:
 
   release:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
       deployments: write
