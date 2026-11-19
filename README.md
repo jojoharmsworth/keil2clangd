@@ -223,6 +223,14 @@ python Keil2Json.py -p ./project -o ./build/clangd
 
 The output directory only changes where the JSON file is saved. Relative source and include paths in Keil projects are resolved from the directory containing the `.uvprojx`, including projects stored in subdirectories. `--absolute` controls path formatting inside the database, not its output location.
 
+## Automatic MCU Core Detection
+
+For Keil projects, the generator reads `Cpu` / `CPUTYPE` from the selected Target and adds `--target=arm-none-eabi`, `-mcpu=<core>`, and `-mthumb` to the compilation database. Supported cores: Cortex-M0, M0+, M1, M3, M4, M7, M23, M33, M35P, M52, M55, and M85. No chip-name mapping is needed.
+
+For example, the HC32L021 Cortex-M0+ becomes `-mcpu=cortex-m0plus`. Regenerate the database and restart clangd after switching targets or MCUs. Remove any CPU flags previously added manually in `.clangd` to avoid conflicting settings after a switch.
+
+Automatic detection currently applies only to Keil Cortex-M projects. Missing or unsupported CPU information produces a warning; the generator does not guess the core or infer FPU, floating-point ABI, or TrustZone settings.
+
 ## VS Code clangd Configuration
 
 When writing to the workspace's `.vscode` directory, configure `.vscode/settings.json`:

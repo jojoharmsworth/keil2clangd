@@ -223,6 +223,14 @@ python Keil2Json.py -p ./project -o ./build/clangd
 
 输出目录只影响 JSON 文件的保存位置。Keil 工程中的源文件和 include 相对路径以 `.uvprojx` 所在目录解析，即使工程文件位于子目录也能正确处理。`--absolute` 控制数据库内的路径格式，不控制输出位置。
 
+## 自动识别 MCU 内核
+
+Keil 工程会从当前选中 Target 的 `Cpu` / `CPUTYPE` 字段读取内核，自动向编译数据库添加 `--target=arm-none-eabi`、`-mcpu=<内核>` 和 `-mthumb`。支持 Cortex-M0、M0+、M1、M3、M4、M7、M23、M33、M35P、M52、M55、M85；无需按芯片型号维护映射。
+
+例如 HC32L021 的 Cortex-M0+ 会转换为 `-mcpu=cortex-m0plus`。切换 Target 或 MCU 后重新生成数据库并重启 clangd。如果此前在 `.clangd` 中手动添加了 CPU 参数，请删除这些重复参数，以免切换 MCU 后发生冲突。
+
+此自动识别目前仅适用于 Keil Cortex-M 工程。CPU 信息缺失或不支持时会输出警告；不会猜测内核，也不会自动推断 FPU、浮点 ABI 或 TrustZone 设置。
+
 ## VS Code clangd 配置
 
 如果输出到工作区的 `.vscode` 目录，在 `.vscode/settings.json` 中配置：

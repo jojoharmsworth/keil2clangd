@@ -1,11 +1,19 @@
 import json
 import tempfile
 import unittest
+from Keil2Json import keil_cpu_flags
 from pathlib import Path
 from Keil2Json import CompileCommandsGenerator
 
 
 class OutputDirectoryTests(unittest.TestCase):
+    def test_cpu_flags(self):
+        for core, expected in [('Cortex-M0+', 'cortex-m0plus'), ('Cortex-M0plus', 'cortex-m0plus'), ('Cortex-M3', 'cortex-m3'), ('Cortex-M4', 'cortex-m4'), ('Cortex-M7', 'cortex-m7'), ('Cortex-M33', 'cortex-m33')]:
+            with self.subTest(core=core):
+                self.assertEqual(keil_cpu_flags('CLOCK(48000000) CPUTYPE("' + core + '")'), ['--target=arm-none-eabi', '-mcpu=' + expected, '-mthumb'])
+        self.assertEqual(keil_cpu_flags(''), [])
+        self.assertEqual(keil_cpu_flags('CPUTYPE("unknown")'), [])
+
     def test_output_locations(self):
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as temp:
             root = Path(temp) / 'project'
@@ -25,7 +33,7 @@ class OutputDirectoryTests(unittest.TestCase):
             project_dir = root / 'ide' / 'keil'
             project_dir.mkdir(parents=True)
             project = project_dir / 'demo.uvprojx'
-            project.write_text('<Project><TargetArmAds><Cads><VariousControls><IncludePath>../../source</IncludePath></VariousControls></Cads></TargetArmAds><Groups><Group><Files><File><FilePath>../../source/main.c</FilePath></File></Files></Group></Groups></Project>')
+            project.write_text('<Project><Cpu>CPUTYPE("Cortex-M0+")</Cpu><TargetArmAds><Cads><VariousControls><IncludePath>../../source</IncludePath></VariousControls></Cads></TargetArmAds><Groups><Group><Files><File><FilePath>../../source/main.c</FilePath></File></Files></Group></Groups></Project>')
             class Config:
                 def get(self, *args):
                     return ''
@@ -35,6 +43,8 @@ class OutputDirectoryTests(unittest.TestCase):
             self.assertEqual(sources, [(root / 'source/main.c').as_posix()])
             self.assertEqual(includes, [(root / 'source').as_posix()])
             self.assertEqual(generator.format_path(sources[0]), 'source/main.c')
+            entries = generator.generate_entries(includes, [], sources)
+            self.assertIn('-mcpu=cortex-m0plus', entries[0]['arguments'])
 
     def test_file_as_directory(self):
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as temp:

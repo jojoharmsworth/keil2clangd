@@ -822,6 +822,17 @@ def parse_ewp_toolchain(file_path):
     return "arm"
 
 
+def keil_cpu_flags(cpu_description):
+    match = re.search(r'CPUTYPE\(\s*"([^"]+)"\s*\)', cpu_description, re.IGNORECASE)
+    cpu = match.group(1).strip().lower() if match else ''
+    cpu = cpu.replace('cortex-m0+', 'cortex-m0plus')
+    supported = {'cortex-' + name for name in ('m0', 'm0plus', 'm1', 'm3', 'm4', 'm7', 'm23', 'm33', 'm35p', 'm52', 'm55', 'm85')}
+    if cpu not in supported:
+        print('warning: missing or unsupported Keil CPUTYPE; ARM CPU flags were not inferred', file=sys.stderr)
+        return []
+    return ['--target=arm-none-eabi', '-mcpu=' + cpu, '-mthumb']
+
+
 class CompileCommandsGenerator:
     def __init__(self, path=None, absolute=False, config_manager=None, dry_run=False, target=None, project_type=None, output_dir=None):
         self.path = Path(path).expanduser() if path and str(path).strip() else Path.cwd()
@@ -876,6 +887,7 @@ class CompileCommandsGenerator:
         parse_root = target_root if target_root is not None else root
         if target_name:
             print(f"Using Keil target: {target_name}")
+        self.extra_args = ["-D__GNUC__"] + keil_cpu_flags(parse_root.findtext(".//Cpu", default=""))
         include_paths = []
         defines = []
 

@@ -47,6 +47,7 @@ struct Entry {
 };
 
 struct ProjectData {
+    std::vector<std::string> cpu_flags;
     std::string toolchain;
     std::vector<std::string> includes;
     std::vector<std::string> defines;
@@ -739,6 +740,20 @@ static std::string detect_keil_compiler_from_xml(const std::string& text) {
     return "armcc";
 }
 
+static std::vector<std::string> keil_cpu_flags(const std::string& description) {
+    const std::regex pattern(R"cpu(CPUTYPE\(\s*"([^"]+)"\s*\))cpu", std::regex::icase);
+    std::smatch match;
+    std::string cpu;
+    if (std::regex_search(description, match, pattern)) cpu = lower_copy(trim(match[1].str()));
+    if (cpu == "cortex-m0+") cpu = "cortex-m0plus";
+    const std::set<std::string> supported = {"cortex-m0", "cortex-m0plus", "cortex-m1", "cortex-m3", "cortex-m4", "cortex-m7", "cortex-m23", "cortex-m33", "cortex-m35p", "cortex-m52", "cortex-m55", "cortex-m85"};
+    if (!supported.count(cpu)) {
+        std::cerr << "warning: missing or unsupported Keil CPUTYPE; ARM CPU flags were not inferred\n";
+        return {};
+    }
+    return {"--target=arm-none-eabi", "-mcpu=" + cpu, "-mthumb"};
+}
+
 static ProjectData parse_uvprojx(const fs::path& file, const fs::path& root, const Config& config, const std::string& target_name) {
     const fs::path project_dir = fs::absolute(file).parent_path();
     std::string xml = read_file(file);
@@ -746,6 +761,7 @@ static ProjectData parse_uvprojx(const fs::path& file, const fs::path& root, con
     std::string parse_xml = select_keil_target_xml(xml, target_name, selected_name);
     if (!selected_name.empty()) std::cout << "Using Keil target: " << selected_name << "\n";
     ProjectData data;
+    data.cpu_flags = keil_cpu_flags(first_tag_text(parse_xml, "Cpu"));
     std::string controls = keil_various_controls(parse_xml);
     std::string include_text = first_tag_text(controls.empty() ? parse_xml : controls, "IncludePath");
     if (!include_text.empty()) {
@@ -1061,6 +1077,7 @@ static std::vector<Entry> from_project_data(const fs::path& root, const ProjectD
             "-D__no_init="
         };
     }
+    base.insert(base.end(), data.cpu_flags.begin(), data.cpu_flags.end());
     for (auto& inc : data.includes) base.push_back("-I" + format_path(root, inc, absolute));
     for (auto& def : data.defines) base.push_back("-D" + def);
     for (auto& src : data.sources) {
