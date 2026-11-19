@@ -46,6 +46,22 @@ class OutputDirectoryTests(unittest.TestCase):
             entries = generator.generate_entries(includes, [], sources)
             self.assertIn('-mcpu=cortex-m0plus', entries[0]['arguments'])
 
+    def test_armcc_declspec_and_switching_compilers(self):
+        class Config:
+            def get(self, *args):
+                return ''
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as temp:
+            root = Path(temp).resolve()
+            project = root / 'demo.uvprojx'
+            generator = CompileCommandsGenerator(path=root, config_manager=Config())
+            generator.project_root = root
+            for compiler, enabled in [('ARMCC', True), ('ARMCLANG', False), ('ARMCC', True)]:
+                project.write_text('<Project><pCCUsed>' + compiler + '</pCCUsed><Cpu>CPUTYPE("Cortex-M3")</Cpu><Groups><Group><Files><File><FilePath>main.c</FilePath></File></Files></Group></Groups></Project>')
+                includes, defines, sources = generator.parse_uvprojx(project)
+                args = generator.generate_entries(includes, defines, sources)[0]['arguments']
+                self.assertEqual(args.count('-fdeclspec'), int(enabled))
+                self.assertIn('-mcpu=cortex-m3', args)
+
     def test_file_as_directory(self):
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as temp:
             destination = Path(temp) / 'file'

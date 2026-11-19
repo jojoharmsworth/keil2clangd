@@ -231,6 +231,8 @@ For example, the HC32L021 Cortex-M0+ becomes `-mcpu=cortex-m0plus`. Regenerate t
 
 Automatic detection currently applies only to Keil Cortex-M projects. Missing or unsupported CPU information produces a warning; the generator does not guess the core or infer FPU, floating-point ABI, or TrustZone settings.
 
+For Keil targets using ARMCC, the generator automatically adds `-fdeclspec` to support `__declspec` declarations in ARMCC standard library headers. No toolchain header edits or duplicate flags in `.clangd` are needed.
+
 ## VS Code clangd Configuration
 
 When writing to the workspace's `.vscode` directory, configure `.vscode/settings.json`:

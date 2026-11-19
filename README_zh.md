@@ -231,6 +231,8 @@ Keil 工程会从当前选中 Target 的 `Cpu` / `CPUTYPE` 字段读取内核，
 
 此自动识别目前仅适用于 Keil Cortex-M 工程。CPU 信息缺失或不支持时会输出警告；不会猜测内核，也不会自动推断 FPU、浮点 ABI 或 TrustZone 设置。
 
+选中的 Keil Target 使用 ARMCC 时，生成器会自动添加 `-fdeclspec`，以兼容 ARMCC 标准库头文件中的 `__declspec` 声明。无需修改工具链头文件或在 `.clangd` 中重复添加该参数。
+
 ## VS Code clangd 配置
 
 如果输出到工作区的 `.vscode` 目录，在 `.vscode/settings.json` 中配置：

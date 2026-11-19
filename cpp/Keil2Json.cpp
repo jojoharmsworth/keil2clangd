@@ -774,6 +774,7 @@ static ProjectData parse_uvprojx(const fs::path& file, const fs::path& root, con
     for (auto& f : tags(parse_xml, "FilePath")) data.sources.push_back(slash(resolve_path(project_dir, f)));
     if (!config.keil_cmsis_path.empty()) data.includes.push_back(config.keil_cmsis_path);
     std::string compiler = detect_keil_compiler_from_xml(parse_xml);
+    if (compiler == "armcc") data.cpu_flags.push_back("-fdeclspec");
     if (compiler == "armclang" && !config.keil_armclang_include.empty()) data.includes.push_back(config.keil_armclang_include);
     if (compiler == "armcc" && !config.keil_armcc_include.empty()) data.includes.push_back(config.keil_armcc_include);
     data.includes = unique(data.includes);

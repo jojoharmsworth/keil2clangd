@@ -907,6 +907,8 @@ class CompileCommandsGenerator:
                 abs_includes.append(resolved)
 
         compiler_type = detect_keil_compiler_type_from_root(parse_root)
+        if compiler_type == "armcc":
+            self.extra_args.append("-fdeclspec")
         cmsis = self.config_manager.get("keil", "cmsis_path")
         if cmsis:
             abs_includes.append(cmsis)
