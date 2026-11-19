@@ -288,7 +288,7 @@ def parse_tools_ini(keil_path):
             
             val = val.split("#")[0].strip().strip('"').strip("'")
 
-            # 抓取 RTEPATH
+            # 鎶撳彇 RTEPATH
             if key == "RTEPATH" and not rte_path:
                 rte = resolve_tools_ini_path(root, val)
                 if rte and rte.is_dir():
@@ -869,6 +869,7 @@ class CompileCommandsGenerator:
         return str((base / path).resolve()).replace("\\", "/")
 
     def parse_uvprojx(self, file_path):
+        project_dir = Path(file_path).resolve().parent
         tree = ET.parse(file_path)
         root = tree.getroot()
         target_root, target_name = find_keil_target(root, self.target)
@@ -889,7 +890,7 @@ class CompileCommandsGenerator:
 
         abs_includes = []
         for include in include_paths:
-            resolved = self.resolve_project_path(self.project_root, include)
+            resolved = self.resolve_project_path(project_dir, include)
             if resolved:
                 abs_includes.append(resolved)
 
@@ -910,7 +911,7 @@ class CompileCommandsGenerator:
                 path_elem = file_elem.find("FilePath")
                 if path_elem is None or not path_elem.text:
                     continue
-                source = self.resolve_project_path(self.project_root, path_elem.text)
+                source = self.resolve_project_path(project_dir, path_elem.text)
                 if source:
                     source_files.append(source)
 

@@ -740,6 +740,7 @@ static std::string detect_keil_compiler_from_xml(const std::string& text) {
 }
 
 static ProjectData parse_uvprojx(const fs::path& file, const fs::path& root, const Config& config, const std::string& target_name) {
+    const fs::path project_dir = fs::absolute(file).parent_path();
     std::string xml = read_file(file);
     std::string selected_name;
     std::string parse_xml = select_keil_target_xml(xml, target_name, selected_name);
@@ -748,13 +749,13 @@ static ProjectData parse_uvprojx(const fs::path& file, const fs::path& root, con
     std::string controls = keil_various_controls(parse_xml);
     std::string include_text = first_tag_text(controls.empty() ? parse_xml : controls, "IncludePath");
     if (!include_text.empty()) {
-        for (auto& item : split(include_text, ';')) data.includes.push_back(slash(resolve_path(root, item)));
+        for (auto& item : split(include_text, ';')) data.includes.push_back(slash(resolve_path(project_dir, item)));
     }
     std::string define_text = first_tag_text(controls.empty() ? parse_xml : controls, "Define");
     if (!define_text.empty()) {
         for (auto& item : split(define_text, ',')) data.defines.push_back(item);
     }
-    for (auto& f : tags(parse_xml, "FilePath")) data.sources.push_back(slash(resolve_path(root, f)));
+    for (auto& f : tags(parse_xml, "FilePath")) data.sources.push_back(slash(resolve_path(project_dir, f)));
     if (!config.keil_cmsis_path.empty()) data.includes.push_back(config.keil_cmsis_path);
     std::string compiler = detect_keil_compiler_from_xml(parse_xml);
     if (compiler == "armclang" && !config.keil_armclang_include.empty()) data.includes.push_back(config.keil_armclang_include);
