@@ -3,8 +3,8 @@
 <h1 align="center" style="margin: 30px 0 30px; font-weight: bold;">Keil2Json</h1>
 
 <p align="center">
-  <a href="https://github.com/ming/KeilFormat/releases"><img src="https://img.shields.io/badge/release-download-blue.svg"></a>
-  <a href="https://github.com/ming/KeilFormat/actions"><img src="https://img.shields.io/badge/build-GitHub%20Actions-brightgreen.svg"></a>
+  <a href="https://github.com/jojoharmsworth/keil2clangd/releases"><img src="https://img.shields.io/badge/release-download-blue.svg"></a>
+  <a href="https://github.com/jojoharmsworth/keil2clangd/actions"><img src="https://img.shields.io/badge/build-GitHub%20Actions-brightgreen.svg"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey.svg">
   <img src="https://img.shields.io/badge/project-Keil%20%7C%20IAR%20%7C%20Makefile-orange.svg">
 </p>
@@ -117,7 +117,9 @@ IAR 常见路径：
 
 | 参数 | 说明 |
 | --- | --- |
+| `<path>` | 位置参数形式的工程目录或文件；也可使用 `-p`。 |
 | `-p, --path <path>` | 工程目录或工程文件。默认当前目录。 |
+| `-o, --output-dir <dir>` | 指定输出目录，自动创建缺失目录；相对路径以当前工作目录为基准。 |
 | `-a, --absolute` | 在 `compile_commands.json` 中写入绝对路径。 |
 | `--project-type <type>` | 指定 `keil`、`iar`、`makefile` 或 `make` 分支。 |
 | `-s, --setup` | 运行持久化配置向导。 |
@@ -203,31 +205,42 @@ Keil 日志行为：
 
 ## 输出路径规则
 
-生成文件名固定为：
+生成文件名固定为 `compile_commands.json`。
 
-```text
-compile_commands.json
-```
-
-默认输出位置：
-
-| 选择的分支 | 输出目录 |
+| 输入方式 | 未指定 `-o` 时的输出目录 |
 | --- | --- |
-| Keil | 选中的 `.uvprojx` 所在目录。 |
-| IAR | 选中的 `.ewp` 所在目录。 |
-| Makefile | Makefile 工程目录。 |
+| Keil / IAR 工程目录 | `-p` 指定的目录，省略时为当前工作目录。 |
+| `.uvprojx` / `.ewp` 工程文件 | 指定工程文件所在目录。 |
+| Makefile 工程 | 检测到的 Makefile 工程目录。 |
 
-示例：
+使用 `-o` 或 `--output-dir` 覆盖默认输出目录。不存在的目录会自动创建；相对输出路径以运行命令时的当前工作目录为基准，与 `-p` 无关。
 
-```text
-D:\Project\App\App.uvprojx      -> D:\Project\App\compile_commands.json
-D:\Project\App\App.ewp          -> D:\Project\App\compile_commands.json
-D:\Project\App\Makefile         -> D:\Project\App\compile_commands.json
+```powershell
+Keil2Json.exe -p "D:\Project\Demo" -o "D:\Project\Demo\.vscode"
+Keil2JsonCpp.exe -p "D:\Project\Demo" --output-dir "D:\Project\Demo\.vscode"
+python Keil2Json.py -p ./project -o ./build/clangd
 ```
+
+输出目录只影响 JSON 文件的保存位置。Keil 工程中的源文件和 include 相对路径以 `.uvprojx` 所在目录解析，即使工程文件位于子目录也能正确处理。`--absolute` 控制数据库内的路径格式，不控制输出位置。
+
+## VS Code clangd 配置
+
+如果输出到工作区的 `.vscode` 目录，在 `.vscode/settings.json` 中配置：
+
+```json
+{
+    "clangd.arguments": [
+        "--background-index",
+        "--compile-commands-dir=${workspaceFolder}/.vscode"
+    ]
+}
+```
+
+确保该目录内存在 `compile_commands.json`。如果输出到其他目录，修改 `--compile-commands-dir` 指向实际目录（不是 JSON 文件）；也可以使用绝对路径。重新生成后执行 **clangd: Restart language server**。已有 `clangd.arguments` 时，将该选项合并到现有数组中。
 
 ## 从 Release 使用
 
-从 GitHub Releases 下载对应平台压缩包，解压后直接运行：
+从 [GitHub Releases](https://github.com/jojoharmsworth/keil2clangd/releases) 下载对应平台可执行文件后运行：
 
 ```powershell
 Keil2Json.exe -p .
@@ -266,14 +279,3 @@ C++ 产物路径：
 ```text
 dist-cpp\Keil2JsonCpp.exe
 ```
-
-## Output directory / 指定输出目录
-
-```sh
-python Keil2Json.py --path ./project --output-dir ./build/clangd
-Keil2JsonCpp --path ./project -o ./build/clangd
-```
-
-`-o` / `--output-dir` writes `compile_commands.json` to the specified directory, creating missing directories. Relative output paths are resolved from the current working directory. Without this option, output stays in the project directory. Compilation paths continue to refer to the original project.
-
-使用 `-o` 或 `--output-dir` 指定输出目录，自动创建不存在的目录。相对输出路径以当前工作目录为基准；省略时仍输出到工程目录。编译路径仍指向原工程。可在 clangd 中配置 `--compile-commands-dir` 指向该目录。

@@ -3,8 +3,8 @@
 <h1 align="center" style="margin: 30px 0 30px; font-weight: bold;">Keil2Json</h1>
 
 <p align="center">
-  <a href="https://github.com/ming/KeilFormat/releases"><img src="https://img.shields.io/badge/release-download-blue.svg"></a>
-  <a href="https://github.com/ming/KeilFormat/actions"><img src="https://img.shields.io/badge/build-GitHub%20Actions-brightgreen.svg"></a>
+  <a href="https://github.com/jojoharmsworth/keil2clangd/releases"><img src="https://img.shields.io/badge/release-download-blue.svg"></a>
+  <a href="https://github.com/jojoharmsworth/keil2clangd/actions"><img src="https://img.shields.io/badge/build-GitHub%20Actions-brightgreen.svg"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey.svg">
   <img src="https://img.shields.io/badge/project-Keil%20%7C%20IAR%20%7C%20Makefile-orange.svg">
 </p>
@@ -117,7 +117,9 @@ If no Keil or IAR installation is detected, the setup wizard asks for manual CMS
 
 | Option | Description |
 | --- | --- |
+| `<path>` | Positional project directory or file; alternatively use `-p`. |
 | `-p, --path <path>` | Project directory or project file. Defaults to the current directory. |
+| `-o, --output-dir <dir>` | Output directory; created automatically. Relative paths are resolved from the current working directory. |
 | `-a, --absolute` | Write absolute paths in `compile_commands.json`. |
 | `--project-type <type>` | Select `keil`, `iar`, `makefile`, or `make`. |
 | `-s, --setup` | Run the persistent setup wizard. |
@@ -203,31 +205,42 @@ Keil log behavior:
 
 ## Output Path Rules
 
-The generated file is always named:
+The generated file is always named `compile_commands.json`.
 
-```text
-compile_commands.json
-```
-
-Default output location:
-
-| Selected branch | Output directory |
+| Input | Output directory when `-o` is omitted |
 | --- | --- |
-| Keil | Directory containing the selected `.uvprojx`. |
-| IAR | Directory containing the selected `.ewp`. |
-| Makefile | The Makefile project directory. |
+| Keil / IAR project directory | The directory supplied with `-p`, or the current working directory when omitted. |
+| `.uvprojx` / `.ewp` project file | The directory containing the supplied project file. |
+| Makefile project | The detected Makefile project directory. |
 
-Examples:
+Use `-o` or `--output-dir` to override the output directory. Missing directories are created automatically. Relative output paths are resolved from the current working directory, independently of `-p`.
 
-```text
-D:\Project\App\App.uvprojx      -> D:\Project\App\compile_commands.json
-D:\Project\App\App.ewp          -> D:\Project\App\compile_commands.json
-D:\Project\App\Makefile         -> D:\Project\App\compile_commands.json
+```powershell
+Keil2Json.exe -p "D:\Project\Demo" -o "D:\Project\Demo\.vscode"
+Keil2JsonCpp.exe -p "D:\Project\Demo" --output-dir "D:\Project\Demo\.vscode"
+python Keil2Json.py -p ./project -o ./build/clangd
 ```
+
+The output directory only changes where the JSON file is saved. Relative source and include paths in Keil projects are resolved from the directory containing the `.uvprojx`, including projects stored in subdirectories. `--absolute` controls path formatting inside the database, not its output location.
+
+## VS Code clangd Configuration
+
+When writing to the workspace's `.vscode` directory, configure `.vscode/settings.json`:
+
+```json
+{
+    "clangd.arguments": [
+        "--background-index",
+        "--compile-commands-dir=${workspaceFolder}/.vscode"
+    ]
+}
+```
+
+Ensure this directory contains `compile_commands.json`. For other output locations, point `--compile-commands-dir` to the actual directory (not the JSON file); an absolute path also works. Run **clangd: Restart language server** after regenerating the database. If `clangd.arguments` already exists, merge the option into its existing array.
 
 ## Install from Release
 
-Download the archive for your platform from GitHub Releases and extract it.
+Download the executable for your platform from [GitHub Releases](https://github.com/jojoharmsworth/keil2clangd/releases).
 
 Recommended Windows usage:
 
@@ -268,15 +281,3 @@ The C++ executable is generated at:
 ```text
 dist-cpp\Keil2JsonCpp.exe
 ```
-
-
-## Output directory / 指定输出目录
-
-```sh
-python Keil2Json.py --path ./project --output-dir ./build/clangd
-Keil2JsonCpp --path ./project -o ./build/clangd
-```
-
-`-o` / `--output-dir` writes `compile_commands.json` to the specified directory, creating missing directories. Relative output paths are resolved from the current working directory. Without this option, output stays in the project directory. Compilation paths continue to refer to the original project.
-
-使用 `-o` 或 `--output-dir` 指定输出目录，自动创建不存在的目录。相对输出路径以当前工作目录为基准；省略时仍输出到工程目录。编译路径仍指向原工程。可在 clangd 中配置 `--compile-commands-dir` 指向该目录。
