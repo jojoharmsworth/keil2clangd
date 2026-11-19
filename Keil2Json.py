@@ -823,8 +823,9 @@ def parse_ewp_toolchain(file_path):
 
 
 class CompileCommandsGenerator:
-    def __init__(self, path=None, absolute=False, config_manager=None, dry_run=False, target=None, project_type=None):
+    def __init__(self, path=None, absolute=False, config_manager=None, dry_run=False, target=None, project_type=None, output_dir=None):
         self.path = Path(path).expanduser() if path and str(path).strip() else Path.cwd()
+        self.output_dir = Path(output_dir).expanduser().resolve() if output_dir else None
         self.absolute = absolute
         self.config_manager = config_manager or ConfigManager()
         self.dry_run = dry_run
@@ -1194,7 +1195,8 @@ class CompileCommandsGenerator:
         return entries
 
     def write_json(self, entries):
-        output = self.project_root / "compile_commands.json"
+        output = (self.output_dir or self.project_root) / "compile_commands.json"
+        output.parent.mkdir(parents=True, exist_ok=True)
         with output.open("w", encoding="utf-8") as f:
             json.dump(entries, f, indent=4, ensure_ascii=False)
         return output
@@ -1455,6 +1457,7 @@ def main():
     )
     parser.add_argument("positional_path", nargs="?", default=None, help="Project path or project file path")
     parser.add_argument("--path", "-p", required=False, help="Project path or project file path")
+    parser.add_argument("--output-dir", "-o", help="Output directory (relative to current working directory)")
     parser.add_argument("--absolute", "-a", action="store_true", help="Format paths as absolute")
     parser.add_argument("--project-type", choices=["keil", "iar", "makefile", "make"], help="Select generator branch when multiple project types exist")
     parser.add_argument("--setup", "-s", action="store_true", help="Run setup wizard and save config")
@@ -1512,6 +1515,7 @@ def main():
         generator = CompileCommandsGenerator(
             path=project_path,
             absolute=args.absolute,
+            output_dir=args.output_dir,
             config_manager=manager,
             dry_run=args.dry_run,
             target=args.target,

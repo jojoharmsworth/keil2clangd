@@ -1007,7 +1007,9 @@ static std::string quote_arg(const std::string& s) {
 }
 
 static void write_json(const fs::path& output, const fs::path& root, const std::vector<Entry>& entries, bool absolute) {
+    fs::create_directories(output.parent_path());
     std::ofstream out(output);
+    if (!out) throw std::runtime_error("Cannot write output: " + output.string());
     out << "[\n";
     for (size_t i = 0; i < entries.size(); ++i) {
         const auto& e = entries[i];
@@ -1533,6 +1535,7 @@ int main(int argc, char** argv) {
     std::string project_type;
     std::string keil_uv4;
     std::string keil_log;
+    fs::path output_dir;
     bool path_specified = false;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -1540,6 +1543,7 @@ int main(int argc, char** argv) {
             input = argv[++i];
             path_specified = true;
         }
+        else if ((a == "-o" || a == "--output-dir") && i + 1 < argc) output_dir = fs::absolute(argv[++i]);
         else if (a == "-a" || a == "--absolute") absolute = true;
         else if (a == "-s" || a == "--setup") setup = true;
         else if (a == "--show-config") show_config = true;
@@ -1570,6 +1574,7 @@ int main(int argc, char** argv) {
                 << "       Keil2JsonCpp -p path --keil_build [--keil_action build|rebuild|clean|flash|download|debug] [-t target]\n"
                 << "\nOptions:\n"
                 << "  -p, --path PATH       Project path or project file path\n"
+                << "  -o, --output-dir DIR  Output directory (relative to working directory)\n"
                 << "  -a, --absolute        Format compile_commands.json paths as absolute\n"
                 << "  --project-type TYPE   Select generator branch: keil, iar, makefile, or make\n"
                 << "  -s, --setup           Run setup wizard and save config\n"
@@ -1630,8 +1635,9 @@ int main(int argc, char** argv) {
             std::cout << "Detected Makefile project\n";
             entries = parse_makefile(root, dry_run);
         }
-        write_json(root / "compile_commands.json", root, entries, absolute);
-        std::cout << "generate complete: " << (root / "compile_commands.json").string() << " (" << entries.size() << " files)\n";
+        const fs::path output = (output_dir.empty() ? root : output_dir) / "compile_commands.json";
+        write_json(output, root, entries, absolute);
+        std::cout << "generate complete: " << output.string() << " (" << entries.size() << " files)\n";
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "error: " << e.what() << "\n";

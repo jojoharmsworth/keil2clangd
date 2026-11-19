@@ -269,3 +269,14 @@ The C++ executable is generated at:
 dist-cpp\Keil2JsonCpp.exe
 ```
 
+
+## Output directory / 指定输出目录
+
+```sh
+python Keil2Json.py --path ./project --output-dir ./build/clangd
+Keil2JsonCpp --path ./project -o ./build/clangd
+```
+
+`-o` / `--output-dir` writes `compile_commands.json` to the specified directory, creating missing directories. Relative output paths are resolved from the current working directory. Without this option, output stays in the project directory. Compilation paths continue to refer to the original project.
+
+使用 `-o` 或 `--output-dir` 指定输出目录，自动创建不存在的目录。相对输出路径以当前工作目录为基准；省略时仍输出到工程目录。编译路径仍指向原工程。可在 clangd 中配置 `--compile-commands-dir` 指向该目录。
